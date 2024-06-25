@@ -1,5 +1,6 @@
 import { URL } from "node:url"
 import {JSDOM} from "jsdom"
+import { log } from "node:console";
 
 
 function normalizeUrl(url) {
@@ -16,24 +17,55 @@ function normalizeUrl(url) {
 }
 
 
-async function crawl_web_page(url) {
+async function crawl_web_page(baseURL , currentURL = baseURL , pages  = {}) {
+
+		const baseURLObject = new URL(baseURL)
+		const currentURLObject = new URL(currentURL);
+		if (baseURLObject.hostname !== currentURLObject.hostname) {
+				return pages
+		} 
+		const normalCurrentURL = normalizeUrl(currentURL);
+		console.log(normalCurrentURL);
+		if (normalCurrentURL in pages) {
+				pages[normalCurrentURL] += 1
+		} else {
+				pages[normalCurrentURL] = 1
+		}
+		let html = '';
 		try {
+				html = await getHTML(currentURL);
+		} catch(err) {
+				console.log("failed to fetch html", err);
+				return pages;
+		}
+		const links = getUrlsFromHtml(html, baseURLObject.origin)
+		links.forEach(link => {
+				crawl_web_page(baseURL, link, pages);
+		})
+		return pages
+}
+console.log(await crawl_web_page("https://www.wagslane.dev/"));
+
+
+async function getHTML(url)
+{
+		try {
+
 				const response = await fetch(url);
-				if (response.status >= 400){ 
-						console.log("error occurred");
-						return;
+				if (response.status >= 400) {
+						console.log("bad response");
 				}
-				const contentType = response.headers.get('content-type')
+				const contentType = response.headers.get('content-type');
 				if (contentType !== "text/html; charset=utf-8") {
-						console.log("bad return");
-						return;
-				} 
+						console.log("bad content type");
+				}
 				const html = await response.text()
-				console.log(html);
+				return html;
 		} catch (err) {
-				console.log("an unexpected error occured: ", err);
+				console.log("An Unexpected Error has occured: ", err);
 		}
 }
+
 
 
 function getUrlsFromHtml(htmlbody, rootURL) {
@@ -43,12 +75,13 @@ function getUrlsFromHtml(htmlbody, rootURL) {
 		tags.forEach(tag => {
 				if (tag.href[0] == '/') {
 						// it's a relative url 
-						const finalURL = `${normalizeUrl(rootURL)}${tag.href.substring(1)}/`;
+						const rootURLObject = new URL(rootURL)
+						const finalURL = `${rootURLObject.origin}${tag.href}/`
 						extractedURLs.push(finalURL)
 				}
 				else if (tag.href[0] == 'h'){
 						//normal url 
-						const finalURL = normalizeUrl(tag.href)
+						const finalURL = tag.href
 						console.log(finalURL)
 						extractedURLs.push(finalURL)
 
