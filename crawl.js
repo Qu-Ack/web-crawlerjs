@@ -1,6 +1,5 @@
 import { URL } from "node:url"
 import {JSDOM} from "jsdom"
-import { log } from "node:console";
 
 
 function normalizeUrl(url) {
@@ -44,7 +43,6 @@ async function crawl_web_page(baseURL , currentURL = baseURL , pages  = {}) {
 		})
 		return pages
 }
-console.log(await crawl_web_page("https://www.wagslane.dev/"));
 
 
 async function getHTML(url)
@@ -82,7 +80,6 @@ function getUrlsFromHtml(htmlbody, rootURL) {
 				else if (tag.href[0] == 'h'){
 						//normal url 
 						const finalURL = tag.href
-						console.log(finalURL)
 						extractedURLs.push(finalURL)
 
 				} else {
